@@ -14,8 +14,8 @@ from dataset_generator import generate_sample_dataset
 
 # Page configuration
 st.set_page_config(
-    page_title="Retina Signal — Clinical Decision Support",
-    page_icon="️",
+    page_title="Retina Signal | DR Decision Support",
+    page_icon="👁️",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -184,6 +184,10 @@ if "cases_db" not in st.session_state:
     st.session_state.cases_db = {}
 if "active_case_id" not in st.session_state:
     st.session_state.active_case_id = None
+if "patient_id_val" not in st.session_state:
+    st.session_state["patient_id_val"] = f"PT-{np.random.randint(100, 999)}"
+if "confirm_reset" not in st.session_state:
+    st.session_state.confirm_reset = False
 
 sample_dir = os.path.join(os.path.dirname(__file__), "data", "sample_images")
 if not os.path.exists(sample_dir):
@@ -450,7 +454,8 @@ elif st.session_state.current_page == "New Screening":
         
         c1, c2 = st.columns(2)
         with c1:
-            patient_id_input = st.text_input("Patient Identifier *", value=f"PT-{np.random.randint(100, 999)}")
+            patient_id_input = st.text_input("Patient Identifier *", value=st.session_state["patient_id_val"])
+            st.session_state["patient_id_val"] = patient_id_input
             patient_age_input = st.number_input("Age (years) *", min_value=18, max_value=120, value=58)
             diabetes_duration_input = st.number_input("Diabetes Duration (years)", min_value=0.0, max_value=60.0, value=12.0, step=0.5)
         with c2:
@@ -482,15 +487,17 @@ elif st.session_state.current_page == "New Screening":
                 selected_image = Image.open(sample_path)
                 image_name_str = os.path.basename(sample_path)
         else:
-            uploaded_file = st.file_uploader("Upload Retinal Fundus Photo (JPEG/PNG < 6MB)", type=["jpg", "jpeg", "png"])
+            uploaded_file = st.file_uploader("Upload Retinal Fundus Photo (JPEG/PNG, Max 6MB)", type=["jpg", "jpeg", "png"])
             if uploaded_file is not None:
-                selected_image = Image.open(uploaded_file)
-                image_name_str = uploaded_file.name
+                if uploaded_file.size > 6 * 1024 * 1024:
+                    st.error("File size exceeds 6MB limit. Please upload an image under 6MB.")
+                    selected_image = None
+                else:
+                    selected_image = Image.open(uploaded_file)
+                    image_name_str = uploaded_file.name
             else:
-                sample_path = sample_images["Kaggle: Diabetic Retinopathy"]
-                if os.path.exists(sample_path):
-                    selected_image = Image.open(sample_path)
-                    image_name_str = "kaggle_diabetic_retinopathy.jpg"
+                st.warning("️ Please upload a retinal fundus photograph (JPEG/PNG, < 6MB) to start screening.")
+                selected_image = None
 
         if selected_image is not None:
             st.image(selected_image, caption=f"Selected Input: {image_name_str}", use_container_width=True)
@@ -501,7 +508,7 @@ elif st.session_state.current_page == "New Screening":
     st.markdown("---")
     if st.button(" Start Screening & Generate Case Record", type="primary", use_container_width=True):
         if not selected_image:
-            st.error("Please provide a valid retinal image.")
+            st.error("Cannot proceed: No valid retinal image provided. Please upload a file or select a benchmark image.")
         else:
             with st.spinner("Processing computer vision classification, clinical risk modeling, RAG evidence retrieval, and LLM reasoning..."):
                 case_code = f"SCR-{datetime.date.today().strftime('%Y%m%d')}-{np.random.randint(1000, 9999)}"
@@ -524,6 +531,7 @@ elif st.session_state.current_page == "New Screening":
                     query=clinical_question_input,
                     cv_stage_code=cv_res["stage_code"],
                     clinical_risk_code=ml_res["risk_code"],
+                    secondary_finding=cv_res.get("secondary_finding", ""),
                     top_k=3
                 )
                 llm_res = llm_engine.synthesize_report(cv_res, ml_res, rag_res, patient_data)
@@ -594,9 +602,16 @@ elif st.session_state.current_page == "Analysis":
         st.markdown("<div style='text-align: right; padding-top: 0.5rem;'>", unsafe_allow_html=True)
         btn_col1, btn_col2 = st.columns(2)
         with btn_col1:
-            if st.button(" New Screening"):
-                st.session_state.current_page = "New Screening"
-                st.rerun()
+            if st.session_state.confirm_reset:
+                if st.button("Confirm Reset?"):
+                    st.session_state["patient_id_val"] = f"PT-{np.random.randint(100, 999)}"
+                    st.session_state.confirm_reset = False
+                    st.session_state.current_page = "New Screening"
+                    st.rerun()
+            else:
+                if st.button(" New Screening"):
+                    st.session_state.confirm_reset = True
+                    st.rerun()
         with btn_col2:
             st.download_button(
                 " Export Report",
@@ -648,6 +663,16 @@ elif st.session_state.current_page == "Analysis":
             <div style="font-size: 0.75rem; color: #94A3B8; margin-top: 0.2rem;">Validated visual pipeline output</div>
         </div>
         """, unsafe_allow_html=True)
+
+        if cv_res.get("secondary_finding"):
+            st.markdown(f"""
+            <div style="margin-top: 0.75rem; padding: 0.8rem; background: #FFFBEB; border: 1px solid #FCD34D; border-radius: 8px;">
+                <div style="font-size: 0.8rem; font-weight: 600; color: #92400E;">Secondary Ocular Finding</div>
+                <div style="font-size: 0.88rem; font-weight: 700; color: #78350F; margin-top: 0.2rem;">
+                    👁️ {cv_res['secondary_finding']}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
         st.markdown(f"""
         <div style="margin-top: 0.75rem; padding: 0.8rem; background: #F1F5F9; border-radius: 8px;">

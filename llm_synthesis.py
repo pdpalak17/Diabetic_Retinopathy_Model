@@ -20,9 +20,10 @@ class ClinicalLLMReasoningEngine:
         hba1c = patient_info.get("hba1c", 8.2) if patient_info else 8.2
         duration = patient_info.get("diabetes_duration_years", 12) if patient_info else 12
 
-        cv_stage = cv_result.get("stage_name", "Moderate Non-Proliferative DR")
+        cv_stage = cv_result.get("stage_name", "No Diabetic Retinopathy")
         cv_conf = cv_result.get("confidence_score", 91.5)
         lesions = cv_result.get("detected_lesions", [])
+        secondary_finding = cv_result.get("secondary_finding", None)
 
         ml_risk_name = clinical_result.get("risk_name", "Elevated Clinical Risk")
         ml_risk_score = clinical_result.get("risk_score_percent", 64.5)
@@ -35,31 +36,52 @@ class ClinicalLLMReasoningEngine:
             citations.append(f"[{doc['id']}] {doc['title']} ({doc['source']})")
             evidence_summary_lines.append(f"- **[{doc['id']}] {doc['title']}**: {doc['content']}")
 
-        # Determine referral urgency
-        stage_num = cv_result.get("stage_code_num", 2)
-        if stage_num >= 4:
-            referral_urgency = "URGENT (Specialist evaluation within 1-2 weeks)"
-            action_plan = "Immediate referral to Retina Specialist for fluorescein angiography, optical coherence tomography (OCT), and potential anti-VEGF / PRP laser intervention."
-        elif stage_num == 3:
-            referral_urgency = "HIGH (Specialist evaluation within 2-4 weeks)"
-            action_plan = "Prompt ophthalmology referral. Perform OCT to evaluate for macular edema. Optimize glycemic and blood pressure targets."
-        elif stage_num == 2:
-            referral_urgency = "MODERATE (Specialist evaluation within 2-3 months)"
-            action_plan = "Schedule comprehensive dilated eye exam within 2-3 months. Intensify glycemic management (target HbA1c < 7.0%) and BP control."
-        elif stage_num == 1:
-            referral_urgency = "ROUTINE (Annual screening protocol)"
-            action_plan = "Continue annual dilated eye examination. Reinforce lifestyle and glycemic adherence."
+        # Determine referral urgency by synthesizing BOTH CV DR Stage AND Tabular Clinical Risk Score
+        stage_num = cv_result.get("stage_code_num", 0)
+
+        if stage_num >= 4 or ml_risk_score >= 80.0:
+            referral_urgency = "URGENT / IMMEDIATE (Retina Specialist evaluation within 1-2 weeks)"
+            action_plan = (
+                "Prompt referral to a Retina Specialist for comprehensive evaluation (including OCT and Fluorescein Angiography). "
+                "Evaluate for immediate anti-VEGF therapy or panretinal photocoagulation (PRP). "
+                "Intensify systemic management: target HbA1c < 7.0% and blood pressure < 130/80 mmHg."
+            )
+        elif stage_num == 3 or ml_risk_score >= 60.0:
+            referral_urgency = "HIGH URGENCY (Ophthalmology specialist evaluation within 2-4 weeks)"
+            action_plan = (
+                "Refer to Ophthalmology within 2 to 4 weeks. Perform dilated fundus examination and Macular OCT. "
+                "Tighten glycemic control (HbA1c target < 7.0%) and monitor blood pressure closely to prevent rapid disease progression."
+            )
+        elif stage_num == 2 or ml_risk_score >= 35.0:
+            referral_urgency = "SEMI-URGENT (Eye care specialist follow-up within 2-3 months)"
+            action_plan = (
+                "Schedule a comprehensive dilated eye examination within 2 to 3 months. "
+                "Optimize diabetes self-management, review HbA1c every 3 months, and control blood pressure."
+            )
+        elif stage_num == 1 or ml_risk_score >= 20.0:
+            referral_urgency = "EARLY FOLLOW-UP (Dilated eye examination within 6 months)"
+            action_plan = (
+                "Schedule follow-up dilated eye examination within 6 months. "
+                "Reinforce lifestyle modifications, blood glucose monitoring, and annual microvascular risk assessments."
+            )
         else:
-            referral_urgency = "ROUTINE (Screening every 12-24 months)"
-            action_plan = "Maintain regular diabetes eye screening every 12 to 24 months per ADA recommendations."
+            referral_urgency = "ROUTINE (Annual screening protocol every 12-24 months)"
+            action_plan = (
+                "Continue routine annual dilated eye screening per ADA guidelines. "
+                "Maintain optimal glycemic (HbA1c < 7.0%) and blood pressure targets."
+            )
 
         # Executive Clinical Narrative Generation
         narrative = f"""
 ### Executive Clinical Impression
 Patient **{patient_id}** ({age} years old, {duration} yrs T2D, HbA1c {hba1c}%) was evaluated using the Multimodal Diabetic Retinopathy Screening System.
-- **Computer Vision Assessment**: Classed as **{cv_stage}** with **{cv_conf}%** model confidence.
-- **Clinical ML Risk Model**: Evaluated at **{ml_risk_name}** ({ml_risk_score}% cumulative risk score).
-- **Referral Urgency**: **{referral_urgency}**.
+- **Diabetic Retinopathy Assessment**: Classed as **{cv_stage}** with **{cv_conf}%** model confidence.
+"""
+        if secondary_finding:
+            narrative += f"- **Secondary Ocular Finding**: **{secondary_finding}**.\n"
+
+        narrative += f"""- **Clinical Risk Model**: Evaluated at **{ml_risk_name}** ({ml_risk_score}% cumulative risk score).
+- **Harmonized Referral Urgency**: **{referral_urgency}**.
 
 ### 1. Computer Vision & Lesion Analysis
 The deep visual feature analysis identified the following retinal hallmarks:

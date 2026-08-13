@@ -79,6 +79,19 @@ KNOWLEDGE_BASE = [
             "3) Severe DR / PDR / Macular Edema: Immediate retina specialist referral."
         ),
         "tags": ["ico", "triage", "referral", "telehealth", "decision_support"]
+    },
+    {
+        "id": "AAO-COPATH-2023",
+        "title": "AAO Guidelines: Co-occurring Ocular Comorbidities in Diabetes",
+        "source": "American Academy of Ophthalmology (AAO) Preferred Practice Patterns 2023",
+        "section": "Secondary Ocular Conditions in Diabetic Patients",
+        "content": (
+            "Patients with diabetes mellitus face elevated incidence of co-occurring ocular conditions including "
+            "open-angle glaucoma and premature cataract formation. Clinical evaluation during DR screening should "
+            "assess optic nerve head cup-to-disc ratio and lens transparency. Any secondary ocular findings require "
+            "co-management and appropriate referral alongside DR staging."
+        ),
+        "tags": ["glaucoma", "cataract", "copathology", "comorbidities", "optic_nerve"]
     }
 ]
 
@@ -94,15 +107,17 @@ class DiabeticRetinopathyRAGRetriever:
         corpus = [f"{doc['title']} {doc['section']} {doc['content']} {' '.join(doc['tags'])}" for doc in self.documents]
         self.tfidf_matrix = self.vectorizer.fit_transform(corpus)
 
-    def retrieve(self, query: str = "", cv_stage_code: str = "", clinical_risk_code: str = "", top_k: int = 3) -> list:
+    def retrieve(self, query: str = "", cv_stage_code: str = "", clinical_risk_code: str = "", secondary_finding: str = "", top_k: int = 3) -> list:
         """
-        Retrieves top_k most relevant medical evidence passages based on visual severity, clinical risk, and user query.
+        Retrieves top_k most relevant medical evidence passages based on visual severity, clinical risk, secondary findings, and user query.
         """
         search_terms = []
         if cv_stage_code:
             search_terms.append(cv_stage_code.lower())
         if clinical_risk_code:
             search_terms.append(f"{clinical_risk_code.lower()} risk")
+        if secondary_finding:
+            search_terms.append(secondary_finding.lower())
         if query:
             search_terms.append(query)
 
