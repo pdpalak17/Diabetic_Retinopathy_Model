@@ -140,6 +140,44 @@ class DiabeticRetinopathyCVModel:
             pickle.dump({"scaler": self.scaler, "clf": self.clf, "class_names": self.class_names}, f)
         print(f"[CV Model] Kaggle dataset model trained and saved to {CV_MODEL_PATH}")
 
+    def train_on_samples(self, img_paths_dict: dict):
+        """
+        Fallback training on sample/synthetic fundus images when full Kaggle dataset is absent.
+        """
+        X, y = [], []
+        class_names = ["cataract", "diabetic_retinopathy", "glaucoma", "normal"]
+        
+        for stage, img_path in img_paths_dict.items():
+            if os.path.exists(img_path):
+                try:
+                    with Image.open(img_path) as img:
+                        feats = extract_visual_features(img)
+                        c_idx = 3 if stage == 0 else 1
+                        X.append((feats, c_idx))
+                except Exception:
+                    pass
+
+        X_full, y_full = [], []
+        if X:
+            for feats, c_idx in X:
+                for _ in range(30):
+                    noise = np.random.normal(0, 0.04, size=feats.shape).astype(np.float32)
+                    X_full.append(feats + noise)
+                    y_full.append(c_idx)
+        
+        present_classes = set(y_full)
+        base_feat = X[0][0] if X else np.random.normal(100, 20, size=18).astype(np.float32)
+        for c_idx in range(4):
+            if c_idx not in present_classes:
+                for _ in range(30):
+                    noise = np.random.normal(0, 0.1, size=base_feat.shape).astype(np.float32)
+                    X_full.append(base_feat + noise)
+                    y_full.append(c_idx)
+
+        X_full = np.array(X_full, dtype=np.float32)
+        y_full = np.array(y_full, dtype=np.int32)
+        self.train_on_kaggle_dataset(X_full, y_full, class_names=class_names)
+
     def load_model(self) -> bool:
         if os.path.exists(CV_MODEL_PATH):
             try:

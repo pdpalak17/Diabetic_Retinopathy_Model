@@ -114,7 +114,7 @@ __pycache__/
 *.pyc
 *.zip
 data/clinical_dataset.csv
-models/*.pkl
+
 
 # Manus version file (auto-generated, not part of source)
 client/public/__manus__/version.json
