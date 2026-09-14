@@ -1,10 +1,10 @@
-# 👁️ Multimodal Diabetic Retinopathy Screening & Decision Support System
+# Multimodal Diabetic Retinopathy Screening & Decision Support System
 
 An advanced, end-to-end clinical decision-support AI solution designed for Diabetic Retinopathy (DR) screening. This system fuses **Deep Transfer Learning (Computer Vision)**, **Machine Learning**, and **Retrieval-Augmented Generation (RAG)** to provide ophthalmologists with grounded, evidence-based clinical explanation syntheses.
 
 ---
 
-## 🌟 Key Features
+##  Key Features
 - **Deep Learning Vision Pipeline**: Leverages PyTorch and MobileNetV2 to extract rich, 1280-dimensional semantic features from retinal fundus images, achieving State-of-the-Art accuracy for DR detection.
 - **Multimodal AI Reasoning**: Combines visual imaging anomalies with tabular patient clinical history (biomarkers) to provide holistic risk assessments.
 - **Explainable AI (XAI)**: Generates clinical contrast-enhanced visual saliency heatmaps to localize potential lesions and anomalies.
@@ -13,7 +13,7 @@ An advanced, end-to-end clinical decision-support AI solution designed for Diabe
 
 ---
 
-## 🧠 System Architecture
+##  System Architecture
 
 The ecosystem relies on three distinct intelligence pipelines converging into a reasoning engine:
 
@@ -36,7 +36,7 @@ The ecosystem relies on three distinct intelligence pipelines converging into a 
 
 ---
 
-## 🚀 Quick Start Instructions
+##  Quick Start Instructions
 
 ### Prerequisites
 Ensure you have Python 3.9+ installed.
@@ -64,7 +64,7 @@ streamlit run app.py
 
 ---
 
-## 📊 Evaluation Metrics
+##  Evaluation Metrics
 
 ### Computer Vision Performance (Kaggle Dataset)
 The CV pipeline was rigorously trained and evaluated on **4,145 real retinal images** across 4 classes (Normal, Cataract, Glaucoma, Diabetic Retinopathy). The integration of MobileNetV2 has yielded near-perfect performance for DR.
@@ -83,7 +83,7 @@ The CV pipeline was rigorously trained and evaluated on **4,145 real retinal ima
 
 ---
 
-## 🛠️ Technology Stack
+##  Technology Stack
 - **Machine Learning**: `PyTorch`, `Torchvision`, `Scikit-Learn`, `Pandas`, `NumPy`
 - **Application Frontend**: `Streamlit`
 - **Computer Vision**: `Pillow`, `OpenCV` (indirect via PIL filters)
