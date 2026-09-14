@@ -9,9 +9,9 @@ An end-to-end clinical decision-support AI solution for Diabetic Retinopathy (DR
 The system consists of three intelligence pipelines and a reasoning engine:
 
 1. **Computer Vision (CV) Pipeline (`cv_model.py`)**:
-   - Analyzes color fundus photographs.
-   - Extracts multi-spectral color moments, green-channel contrast metrics, and lesion density features.
-   - Classifies DR severity into 5 international clinical stages: No DR (0), Mild NPDR (1), Moderate NPDR (2), Severe NPDR (3), Proliferative DR (4).
+   - Analyzes color fundus photographs using **Deep Transfer Learning**.
+   - Integrates **PyTorch** and **MobileNetV2** alongside classical image processing to extract a rich 1298-dimensional semantic and statistical feature vector.
+   - Classifies eye diseases (e.g., Cataract, Diabetic Retinopathy, Glaucoma, Normal).
    - Generates CLAHE contrast-enhanced views and AI saliency heatmap overlays for lesion localization.
 
 2. **Clinical ML Risk Pipeline (`clinical_risk_model.py`)**:
@@ -49,8 +49,14 @@ streamlit run app.py
 
 ##  Evaluation Metrics
 
-Evaluated according to clinical system specifications:
+### Computer Vision Performance (Kaggle Dataset)
+The CV pipeline was rigorously trained and evaluated on **4,145 real retinal images** across 4 classes (Normal, Cataract, Glaucoma, Diabetic Retinopathy).
 
+- **Overall Accuracy**: ~90% (89.87%)
+- **Diabetic Retinopathy F1-Score**: 98%
+- **ROC-AUC**: 0.98
+
+### Full System Evaluation
 | Module | Metrics Evaluated |
 | :--- | :--- |
 | **Computer Vision** | Accuracy, Precision, Recall, F1-Score, Confusion Matrix |
