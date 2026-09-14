@@ -238,6 +238,7 @@ class DiabeticRetinopathyCVModel:
             probs = {self.class_names[i]: float(probs_arr[i]) for i in range(len(probs_arr))}
 
         # Ensure DR Assessment is ALWAYS a valid Diabetic Retinopathy Stage
+        pred_class = str(pred_class).lower().strip()
         secondary_finding = None
         dark_lesions_cnt = feats[8]
         bright_lesions_cnt = feats[9]

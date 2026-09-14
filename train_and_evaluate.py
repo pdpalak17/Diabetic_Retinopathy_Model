@@ -9,8 +9,18 @@ from sklearn.metrics import classification_report, accuracy_score, f1_score, pre
 from cv_model import DiabeticRetinopathyCVModel, extract_visual_features, MODEL_DIR
 from clinical_risk_model import DiabeticRetinopathyClinicalModel, FEATURE_NAMES
 from dataset_generator import generate_sample_dataset
+import kagglehub
 
-KAGGLE_DATASET_DIR = r"C:\Users\Cycle\.cache\kagglehub\datasets\falahgatea\eye-diseases-classification\versions\1\eye_diseases_classification"
+# Dynamically download/locate the Kaggle dataset
+try:
+    base_dataset_path = kagglehub.dataset_download("falahgatea/eye-diseases-classification")
+    KAGGLE_DATASET_DIR = os.path.join(base_dataset_path, "eye_diseases_classification")
+    if not os.path.exists(KAGGLE_DATASET_DIR):
+        KAGGLE_DATASET_DIR = base_dataset_path
+except Exception as e:
+    print(f"Failed to download Kaggle dataset: {e}")
+    KAGGLE_DATASET_DIR = ""
+
 SAMPLE_IMAGES_DIR = os.path.join(os.path.dirname(__file__), "data", "sample_images")
 
 def load_kaggle_dataset(dataset_dir: str, samples_per_class: int = 250):
