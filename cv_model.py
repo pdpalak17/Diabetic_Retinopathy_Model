@@ -4,6 +4,28 @@ import numpy as np
 from PIL import Image, ImageOps, ImageFilter
 from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
 from sklearn.preprocessing import StandardScaler
+import torch
+import torchvision.models as models
+import torchvision.transforms as transforms
+
+# Lazy-loaded deep feature extractor
+_mobilenet = None
+_mobilenet_transforms = None
+
+def _get_mobilenet():
+    global _mobilenet, _mobilenet_transforms
+    if _mobilenet is None:
+        _mobilenet = models.mobilenet_v2(weights=models.MobileNet_V2_Weights.DEFAULT)
+        # We only want the features, not the classification head
+        _mobilenet.classifier = torch.nn.Identity()
+        _mobilenet.eval()
+        _mobilenet_transforms = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+    return _mobilenet, _mobilenet_transforms
 
 # Support both Kaggle Eye Diseases Classification & DR Severity
 DISEASE_MAPPING = {
@@ -88,7 +110,16 @@ def extract_visual_features(pil_img: Image.Image) -> np.ndarray:
         nasal_region_brightness, temporal_region_brightness
     ], dtype=np.float32)
 
-    return features
+    # 5. Deep Transfer Learning Features (MobileNetV2)
+    model, transform = _get_mobilenet()
+    img_tensor = transform(img_rgb.convert("RGB")).unsqueeze(0)
+    
+    with torch.no_grad():
+        deep_features = model(img_tensor).squeeze(0).numpy()
+    
+    # Concatenate 18 manual features with 1280 deep features = 1298 dimensions
+    combined_features = np.concatenate([features, deep_features])
+    return combined_features
 
 def generate_saliency_heatmap(pil_img: Image.Image) -> Image.Image:
     """
@@ -132,7 +163,7 @@ class DiabeticRetinopathyCVModel:
     """
     def __init__(self):
         self.scaler = StandardScaler()
-        self.clf = HistGradientBoostingClassifier(max_iter=120, learning_rate=0.08, random_state=42)
+        self.clf = HistGradientBoostingClassifier(max_iter=300, learning_rate=0.05, max_leaf_nodes=63, l2_regularization=0.1, random_state=42)
         self.class_names = ["cataract", "diabetic_retinopathy", "glaucoma", "normal"]
         self.is_fitted = False
 
@@ -196,8 +227,8 @@ class DiabeticRetinopathyCVModel:
                 with open(CV_MODEL_PATH, "rb") as f:
                     data = pickle.load(f)
                     scaler = data["scaler"]
-                    if hasattr(scaler, "n_features_in_") and scaler.n_features_in_ != 18:
-                        print(f"[CV Model] Loaded scaler expects {scaler.n_features_in_} features, but 18 required. Invalidating cache.")
+                    if hasattr(scaler, "n_features_in_") and scaler.n_features_in_ != 1298:
+                        print(f"[CV Model] Loaded scaler expects {scaler.n_features_in_} features, but 1298 required. Invalidating cache.")
                         return False
                     self.scaler = scaler
                     self.clf = data["clf"]

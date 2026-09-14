@@ -23,7 +23,7 @@ except Exception as e:
 
 SAMPLE_IMAGES_DIR = os.path.join(os.path.dirname(__file__), "data", "sample_images")
 
-def load_kaggle_dataset(dataset_dir: str, samples_per_class: int = 250):
+def load_kaggle_dataset(dataset_dir: str, samples_per_class: int = 1050):
     """
     Loads images from Kaggle Eye Diseases dataset folders, extracts visual features, and builds feature matrices.
     """
@@ -76,7 +76,7 @@ def train_and_evaluate_all():
 
     # 2. Load & Train CV Model on Kaggle Dataset
     if os.path.exists(KAGGLE_DATASET_DIR):
-        X_kaggle, y_kaggle, class_names, sample_map = load_kaggle_dataset(KAGGLE_DATASET_DIR, samples_per_class=250)
+        X_kaggle, y_kaggle, class_names, sample_map = load_kaggle_dataset(KAGGLE_DATASET_DIR, samples_per_class=1050)
         
         # Train / Test split on Kaggle dataset (80% train, 20% test)
         X_train_cv, X_test_cv, y_train_cv, y_test_cv = train_test_split(
