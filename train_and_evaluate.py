@@ -117,15 +117,16 @@ def train_and_evaluate_all():
 
     # 3. Train Clinical Risk ML Model
     print("\n[2/2] Training Clinical Risk ML Model...")
-    clinical_model = DiabeticRetinopathyClinicalModel()
-    clinical_model.fit(csv_path)
-
     df = pd.read_csv(csv_path)
     X_clin = df[FEATURE_NAMES]
     y_clin = df["dr_risk_label"]
 
+    # Split FIRST, fit on the training rows only, then evaluate on the held-out rows.
     X_train_c, X_test_c, y_train_c, y_test_c = train_test_split(X_clin, y_clin, test_size=0.25, random_state=42, stratify=y_clin)
-    
+
+    clinical_model = DiabeticRetinopathyClinicalModel()
+    clinical_model.fit_arrays(X_train_c, y_train_c, save=False)
+
     test_scaled_c = clinical_model.scaler.transform(X_test_c)
     y_pred_c = clinical_model.clf.predict(test_scaled_c)
     y_proba_c = clinical_model.clf.predict_proba(test_scaled_c)
@@ -138,6 +139,10 @@ def train_and_evaluate_all():
     print("               CLINICAL RISK ML EVALUATION METRICS               ")
     print("=" * 70)
     print(f"  Accuracy: {c_acc * 100:.2f}% | F1-Score: {c_f1:.4f} | ROC-AUC: {c_auc:.4f}")
+    print("  (held-out split; model fitted on the training split only)")
+
+    # Deployed model: refit on all rows AFTER evaluation. Not used for any reported metric.
+    DiabeticRetinopathyClinicalModel().fit(csv_path)
 
     print("=" * 70)
     print("  [SUCCESS] All Models Successfully Trained on Kaggle Dataset!   ")

@@ -35,22 +35,27 @@ class DiabeticRetinopathyClinicalModel:
         self.clf = GradientBoostingClassifier(n_estimators=100, learning_rate=0.08, max_depth=4, random_state=42)
         self.is_fitted = False
 
-    def fit(self, csv_path: str):
+    def fit_arrays(self, X, y, save: bool = True):
         """
-        Trains the clinical risk model on the tabular dataset.
+        Fits the scaler and classifier on the given rows only. Pass the training
+        split here when evaluating, with save=False, so held-out rows are never seen.
         """
-        df = pd.read_csv(csv_path)
-        X = df[FEATURE_NAMES]
-        y = df["dr_risk_label"]
-
         X_scaled = self.scaler.fit_transform(X)
         self.clf.fit(X_scaled, y)
         self.is_fitted = True
 
-        os.makedirs(MODEL_DIR, exist_ok=True)
-        with open(CLINICAL_MODEL_PATH, "wb") as f:
-            pickle.dump({"scaler": self.scaler, "clf": self.clf}, f)
-        print(f"[Clinical ML Model] Model trained and saved to {CLINICAL_MODEL_PATH}")
+        if save:
+            os.makedirs(MODEL_DIR, exist_ok=True)
+            with open(CLINICAL_MODEL_PATH, "wb") as f:
+                pickle.dump({"scaler": self.scaler, "clf": self.clf}, f)
+            print(f"[Clinical ML Model] Model trained and saved to {CLINICAL_MODEL_PATH}")
+
+    def fit(self, csv_path: str):
+        """
+        Trains the deployed model on the full tabular dataset (do not use for evaluation).
+        """
+        df = pd.read_csv(csv_path)
+        self.fit_arrays(df[FEATURE_NAMES], df["dr_risk_label"], save=True)
 
     def load_model(self) -> bool:
         if os.path.exists(CLINICAL_MODEL_PATH):
